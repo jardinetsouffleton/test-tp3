@@ -977,7 +977,7 @@ if __name__ == "__main__":
     
     num_runs = 12
     configs = generate_random_search_parameters(
-        num_runs
+        num_runs,
         batch_sizes=[64, 128], 
         hidden_units=[128, 256, 512], 
         learning_rates=[0.001, 0.005],
@@ -1055,7 +1055,7 @@ if __name__ == "__main__":
             config=config,
             project='INF8225 - TP3',  # Title of your project
             group=config["model_type"],  # In what group of runs do you want this run to be in?
-            name=f'bs={config["model_type"]}-hi={config["dim_hidden"]}-he{config["num_heads"]}-l={config["n_layers"]}-lr={config["lr"]}-dr={config["dropout"]}-sat-spec'
+            name=f'bs={config["model_type"]}-hi={config["dim_hidden"]}-he{config["num_heads"]}-l={config["n_layers"]}-lr={config["lr"]}-dr={config["dropout"]}',
             save_code=True,
         ):
             train_model(model, config)
