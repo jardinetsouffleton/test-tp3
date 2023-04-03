@@ -976,88 +976,88 @@ if __name__ == "__main__":
                 yield config
     
     
-        for model_type in ["GRU", "RNN"]:
-            num_runs = 15
-            configs = generate_random_search_parameters(
-                num_runs,
-                batch_sizes=[64, 128], 
-                hidden_units=[128, 256, 512], 
-                learning_rates=[0.001, 0.0015],
-                dim_embeddings=[256, 400, 512],
-                num_layers=[2, 3, 4],
-                dropout=[0.1, 0.2],
-                model_type=model_type
+    for model_type in ["GRU", "RNN"]:
+        num_runs = 15
+        configs = generate_random_search_parameters(
+            num_runs,
+            batch_sizes=[64, 128], 
+            hidden_units=[128, 256, 512], 
+            learning_rates=[0.001, 0.0015],
+            dim_embeddings=[256, 400, 512],
+            num_layers=[2, 3, 4],
+            dropout=[0.1, 0.2],
+            model_type=model_type
+        )
+            
+        for config in configs:
+            torch.manual_seed(config['seed'])
+
+            config['train_loader'] = DataLoader(
+                train_dataset,
+                batch_size=config['batch_size'],
+                shuffle=True,
+                collate_fn=lambda batch: generate_batch(batch, config['src_pad_idx'], config['tgt_pad_idx'])
             )
-                
-            for config in configs:
-                torch.manual_seed(config['seed'])
 
-                config['train_loader'] = DataLoader(
-                    train_dataset,
-                    batch_size=config['batch_size'],
-                    shuffle=True,
-                    collate_fn=lambda batch: generate_batch(batch, config['src_pad_idx'], config['tgt_pad_idx'])
-                )
+            config['val_loader'] = DataLoader(
+                val_dataset,
+                batch_size=config['batch_size'],
+                shuffle=True,
+                collate_fn=lambda batch: generate_batch(batch, config['src_pad_idx'], config['tgt_pad_idx'])
+            )
 
-                config['val_loader'] = DataLoader(
-                    val_dataset,
-                    batch_size=config['batch_size'],
-                    shuffle=True,
-                    collate_fn=lambda batch: generate_batch(batch, config['src_pad_idx'], config['tgt_pad_idx'])
-                )
+            model = TranslationRNN(
+                config['n_tokens_src'],
+                config['n_tokens_tgt'],
+                config['dim_embedding'],
+                config['dim_hidden'],
+                config['n_layers'],
+                config['dropout'],
+                config['src_pad_idx'],
+                config['tgt_pad_idx'],
+                config['model_type'],
+            )
+            """
+            model = TranslationTransformer(
+                config['n_tokens_src'],
+                config['n_tokens_tgt'],
+                config['n_heads'],
+                config['dim_embedding'],
+                config['dim_hidden'],
+                config['n_layers'],
+                config['dropout'],
+                config['src_pad_idx'],
+                config['tgt_pad_idx'],
+            )
+            """
 
-                model = TranslationRNN(
-                    config['n_tokens_src'],
-                    config['n_tokens_tgt'],
-                    config['dim_embedding'],
-                    config['dim_hidden'],
-                    config['n_layers'],
-                    config['dropout'],
-                    config['src_pad_idx'],
-                    config['tgt_pad_idx'],
-                    config['model_type'],
-                )
-                """
-                model = TranslationTransformer(
-                    config['n_tokens_src'],
-                    config['n_tokens_tgt'],
-                    config['n_heads'],
-                    config['dim_embedding'],
-                    config['dim_hidden'],
-                    config['n_layers'],
-                    config['dropout'],
-                    config['src_pad_idx'],
-                    config['tgt_pad_idx'],
-                )
-                """
+            config['optimizer'] = optim.Adam(
+                model.parameters(),
+                lr=config['lr'],
+                betas=config['betas'],
+            )
 
-                config['optimizer'] = optim.Adam(
-                    model.parameters(),
-                    lr=config['lr'],
-                    betas=config['betas'],
-                )
+            weight_classes = torch.ones(config['n_tokens_tgt'], dtype=torch.float)
+            weight_classes[config['tgt_vocab']['<unk>']] = 0.1  # Lower the importance of that class
+            config['loss'] = nn.CrossEntropyLoss(
+                weight=weight_classes,
+                ignore_index=config['tgt_pad_idx'],  # We do not have to learn those
+            )
 
-                weight_classes = torch.ones(config['n_tokens_tgt'], dtype=torch.float)
-                weight_classes[config['tgt_vocab']['<unk>']] = 0.1  # Lower the importance of that class
-                config['loss'] = nn.CrossEntropyLoss(
-                    weight=weight_classes,
-                    ignore_index=config['tgt_pad_idx'],  # We do not have to learn those
-                )
-
-                summary(
-                    model,
-                    input_size=[
-                        (config['batch_size'], config['max_sequence_length']),
-                        (config['batch_size'], config['max_sequence_length'])
-                    ],
-                    dtypes=[torch.long, torch.long],
-                    depth=3,
-                )
-                with wandb.init(
-                    config=config,
-                    project='INF8225 - TP3',  # Title of your project
-                    group=config["model_type"],  # In what group of runs do you want this run to be in?
-                    name=f'bs={config["model_type"]}-hi={config["dim_hidden"]}-he{config["num_heads"]}-l={config["n_layers"]}-lr={config["lr"]}-dr={config["dropout"]}',
-                    save_code=True,
-                ):
-                    train_model(model, config)
+            summary(
+                model,
+                input_size=[
+                    (config['batch_size'], config['max_sequence_length']),
+                    (config['batch_size'], config['max_sequence_length'])
+                ],
+                dtypes=[torch.long, torch.long],
+                depth=3,
+            )
+            with wandb.init(
+                config=config,
+                project='INF8225 - TP3',  # Title of your project
+                group=config["model_type"],  # In what group of runs do you want this run to be in?
+                name=f'bs={config["model_type"]}-hi={config["dim_hidden"]}-he{config["num_heads"]}-l={config["n_layers"]}-lr={config["lr"]}-dr={config["dropout"]}',
+                save_code=True,
+            ):
+                train_model(model, config)
