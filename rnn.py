@@ -1057,7 +1057,7 @@ if __name__ == "__main__":
                 config=config,
                 project='INF8225 - TP3',  # Title of your project
                 group=config["model_type"],  # In what group of runs do you want this run to be in?
-                name=f'bs={config["model_type"]}-hi={config["dim_hidden"]}-he{config["num_heads"]}-l={config["n_layers"]}-lr={config["lr"]}-dr={config["dropout"]}',
+                name=f'bs={config["batch_size"]}-hi={config["dim_hidden"]}-emb={config["dim_embeddings"]}-l={config["n_layers"]}-lr={config["lr"]}-dr={config["dropout"]}',
                 save_code=True,
             ):
                 train_model(model, config)
