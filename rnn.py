@@ -388,7 +388,7 @@ class GRUCell(nn.Module):
             z = torch.sigmoid(self.update_gate(x_h))
             r = torch.sigmoid(self.reset_gate(x_h))
             h_tilde = torch.tanh(self.output_gate(torch.cat((x_t, r * h), dim=1)))
-            h = (1 - z) * h + z * h_tilde
+            h = (1 - z) * h_tilde + z * h
             embeddings.append(h)
         
         y = torch.stack(embeddings, dim=1)
